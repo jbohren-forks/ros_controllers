@@ -3,6 +3,7 @@
  *
  *  Copyright (c) 2008, Willow Garage, Inc.
  *  Copyright (c) 2012, hiDOF, Inc.
+ *  Copyright (c) 2013, Johns Hopkins University
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -33,11 +34,11 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-#include <effort_controllers/joint_velocity_controller.h>
+#include <velocity_controllers/joint_velocity_controller.h>
 #include <pluginlib/class_list_macros.h>
 
 
-namespace effort_controllers {
+namespace velocity_controllers {
 
 JointVelocityController::JointVelocityController()
 : command_(0), loop_count_(0)
@@ -48,7 +49,7 @@ JointVelocityController::~JointVelocityController()
   sub_command_.shutdown();
 }
 
-  bool JointVelocityController::init(hardware_interface::EffortJointInterface *robot, 
+  bool JointVelocityController::init(hardware_interface::VelocityJointInterface *robot, 
 				     const std::string &joint_name, const control_toolbox::Pid &pid)
 {
   joint_ = robot->getJointHandle(joint_name);
@@ -57,7 +58,7 @@ JointVelocityController::~JointVelocityController()
   return true;
 }
 
-  bool JointVelocityController::init(hardware_interface::EffortJointInterface *robot, ros::NodeHandle &n)
+  bool JointVelocityController::init(hardware_interface::VelocityJointInterface *robot, ros::NodeHandle &n)
 {
   std::string joint_name;
   if (!n.getParam("joint", joint_name)) {
@@ -142,4 +143,4 @@ void JointVelocityController::setCommandCB(const std_msgs::Float64ConstPtr& msg)
 
 } // namespace
 
-PLUGINLIB_DECLARE_CLASS(effort_controllers, JointVelocityController, effort_controllers::JointVelocityController, controller_interface::ControllerBase)
+PLUGINLIB_DECLARE_CLASS(velocity_controllers, JointVelocityController, velocity_controllers::JointVelocityController, controller_interface::ControllerBase)

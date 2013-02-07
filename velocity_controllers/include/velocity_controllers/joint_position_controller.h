@@ -3,6 +3,7 @@
  *
  *  Copyright (c) 2008, Willow Garage, Inc.
  *  Copyright (c) 2012, hiDOF, Inc.
+ *  Copyright (c) 2013, Johns Hopkins University
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -37,14 +38,14 @@
 #define EFFORT_CONTROLLERS_JOINT_POSITION_CONTROLLER_H
 
 /**
-   @class effort_controllers::JointPositionController
+   @class velocity_controllers::JointPositionController
    @brief Joint Position Controller
 
    This class controls positon using a pid loop.
 
    @section ROS ROS interface
 
-   @param type Must be "effort_controllers::JointPositionController"
+   @param type Must be "velocity_controllers::JointPositionController"
    @param joint Name of the joint to control.
    @param pid Contains the gains for the PID loop around position.  See: control_toolbox::Pid
 
@@ -74,18 +75,18 @@
 #include <realtime_tools/realtime_buffer.h>
 
 
-namespace effort_controllers
+namespace velocity_controllers
 {
 
-class JointPositionController: public controller_interface::Controller<hardware_interface::EffortJointInterface>
+class JointPositionController: public controller_interface::Controller<hardware_interface::VelocityJointInterface>
 {
 public:
 
   JointPositionController();
   ~JointPositionController();
 
-  bool init(hardware_interface::EffortJointInterface*robot, const std::string &joint_name,const control_toolbox::Pid &pid);
-  bool init(hardware_interface::EffortJointInterface *robot, ros::NodeHandle &n);
+  bool init(hardware_interface::VelocityJointInterface *robot, const std::string &joint_name,const control_toolbox::Pid &pid);
+  bool init(hardware_interface::VelocityJointInterface *robot, ros::NodeHandle &n);
 
   /*!
    * \brief Give set position of the joint for next update: revolute (angle) and prismatic (position)

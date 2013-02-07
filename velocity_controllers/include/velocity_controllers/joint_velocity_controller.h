@@ -3,6 +3,7 @@
  *
  *  Copyright (c) 2008, Willow Garage, Inc.
  *  Copyright (c) 2012, hiDOF, Inc.
+ *  Copyright (c) 2013, Johns Hopkins University
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -37,14 +38,14 @@
 #define EFFORT_CONTROLLERS_JOINT_VELOCITY_CONTROLLER_H
 
 /**
-   @class effort_controllers::JointVelocityController
+   @class velocity_controllers::JointVelocityController
    @brief Joint Velocity Controller
 
    This class controls positon using a pid loop.
 
    @section ROS ROS interface
 
-   @param type Must be "effort_controllers::JointVelocityController"
+   @param type Must be "velocity_controllers::JointVelocityController"
    @param joint Name of the joint to control.
    @param pid Contains the gains for the PID loop around velocity.  See: control_toolbox::Pid
 
@@ -70,18 +71,18 @@
 #include <control_toolbox/pid_gains_setter.h>
 #include <realtime_tools/realtime_publisher.h>
 
-namespace effort_controllers
+namespace velocity_controllers
 {
 
-class JointVelocityController: public controller_interface::Controller<hardware_interface::EffortJointInterface>
+class JointVelocityController: public controller_interface::Controller<hardware_interface::VelocityJointInterface>
 {
 public:
 
   JointVelocityController();
   ~JointVelocityController();
 
-  bool init(hardware_interface::EffortJointInterface *robot, const std::string &joint_name, const control_toolbox::Pid &pid);
-  bool init(hardware_interface::EffortJointInterface *robot, ros::NodeHandle &n);
+  bool init(hardware_interface::VelocityJointInterface *robot, const std::string &joint_name, const control_toolbox::Pid &pid);
+  bool init(hardware_interface::VelocityJointInterface *robot, ros::NodeHandle &n);
 
   /*!
    * \brief Give set velocity of the joint for next update: revolute (angle) and prismatic (velocity)
