@@ -37,7 +37,6 @@
 #include <velocity_controllers/joint_velocity_controller.h>
 #include <pluginlib/class_list_macros.h>
 
-
 namespace velocity_controllers {
 
 JointVelocityController::JointVelocityController()
@@ -55,13 +54,12 @@ bool JointVelocityController::init(hardware_interface::VelocityJointInterface *r
   return true;
 }
 
-
 bool JointVelocityController::init(hardware_interface::VelocityJointInterface *robot, ros::NodeHandle &n)
 {
   std::string joint_name;
   if (!n.getParam("joint", joint_name))
   {
-    ROS_ERROR("No joint given (namespace: %s)", n.getNamespace().c_str());
+    ROS_ERROR("No joint given (parameter: %s/joint)", n.getNamespace().c_str());
     return false;
   }
   joint_ = robot->getJointHandle(joint_name);
