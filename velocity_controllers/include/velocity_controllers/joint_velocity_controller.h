@@ -34,42 +34,30 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-#ifndef EFFORT_CONTROLLERS_JOINT_VELOCITY_CONTROLLER_H
-#define EFFORT_CONTROLLERS_JOINT_VELOCITY_CONTROLLER_H
+#ifndef VELOCITY_CONTROLLERS_JOINT_VELOCITY_CONTROLLER_H
+#define VELOCITY_CONTROLLERS_JOINT_VELOCITY_CONTROLLER_H
 
 /**
-   @class velocity_controllers::JointVelocityController
-   @brief Joint Velocity Controller
+   @class velocity_controllers:JointVelocityController
+   @brief Joint Velocity Controller (torque or force)
 
-   This class controls positon using a pid loop.
+   This class passes the commanded effort down to the joint
 
-   @section ROS ROS interface
+   @section ROS interface
 
-   @param type Must be "velocity_controllers::JointVelocityController"
+   @param type Must be "JointVelocityController"
    @param joint Name of the joint to control.
-   @param pid Contains the gains for the PID loop around velocity.  See: control_toolbox::Pid
 
    Subscribes to:
-
-   - @b command (std_msgs::Float64) : The joint velocity to achieve.
-
-   Publishes:
-
-   - @b state (controllers_msgs::JointControllerState) :
-     Current state of the controller, including pid error and gains.
-
+   - @b command (std_msgs::Float64) : The joint effort to apply
 */
 
 #include <boost/thread/condition.hpp>
 #include <ros/node_handle.h>
-#include <boost/scoped_ptr.hpp>
 #include <hardware_interface/joint_command_interface.h>
 #include <controller_interface/controller.h>
-#include <controllers_msgs/JointControllerState.h>
 #include <std_msgs/Float64.h>
-#include <control_toolbox/pid.h>
-#include <control_toolbox/pid_gains_setter.h>
-#include <realtime_tools/realtime_publisher.h>
+
 
 namespace velocity_controllers
 {
@@ -81,54 +69,21 @@ public:
   JointVelocityController();
   ~JointVelocityController();
 
-  bool init(hardware_interface::VelocityJointInterface *robot, const std::string &joint_name, const control_toolbox::Pid &pid);
+  bool init(hardware_interface::VelocityJointInterface *robot, const std::string &joint_name);
   bool init(hardware_interface::VelocityJointInterface *robot, ros::NodeHandle &n);
 
-  /*!
-   * \brief Give set velocity of the joint for next update: revolute (angle) and prismatic (velocity)
-   *
-   * \param double pos Velocity command to issue
-   */
-  void setCommand(double cmd);
-
-  /*!
-   * \brief Get latest velocity command to the joint: revolute (angle) and prismatic (velocity).
-   */
-  void getCommand(double & cmd);
-
-  /*!
-   * \brief Issues commands to the joint. Should be called at regular intervals
-   */
-
-  void starting(const ros::Time& time) {
-    command_ = 0.0;
-    pid_controller_.reset();
-  }
+  void starting(const ros::Time& time) { command_ = 0.0;}
   void update(const ros::Time& time, const ros::Duration& period);
 
-  void getGains(double &p, double &i, double &d, double &i_max, double &i_min);
-  void setGains(const double &p, const double &i, const double &d, const double &i_max, const double &i_min);
-
-  std::string getJointName();
   hardware_interface::JointHandle joint_;
-  double command_;                                /**< Last commanded velocity. */
+  double command_;
 
 private:
-  control_toolbox::Pid pid_controller_;           /**< Internal PID controller. */
-  int loop_count_;
-
-  friend class JointVelocityControllerNode;
-
-  boost::scoped_ptr<
-    realtime_tools::RealtimePublisher<
-      controllers_msgs::JointControllerState> > controller_state_publisher_ ;
-
   ros::Subscriber sub_command_;
-  void setCommandCB(const std_msgs::Float64ConstPtr& msg);
+  void commandCB(const std_msgs::Float64ConstPtr& msg);
+
 };
 
-} // namespace
-
-
+}
 
 #endif

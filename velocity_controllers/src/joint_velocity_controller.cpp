@@ -41,7 +41,7 @@
 namespace velocity_controllers {
 
 JointVelocityController::JointVelocityController()
-: command_(0), loop_count_(0)
+: command_(0)
 {}
 
 JointVelocityController::~JointVelocityController()
@@ -49,98 +49,36 @@ JointVelocityController::~JointVelocityController()
   sub_command_.shutdown();
 }
 
-  bool JointVelocityController::init(hardware_interface::VelocityJointInterface *robot, 
-				     const std::string &joint_name, const control_toolbox::Pid &pid)
+bool JointVelocityController::init(hardware_interface::VelocityJointInterface *robot, const std::string &joint_name)
 {
   joint_ = robot->getJointHandle(joint_name);
-  pid_controller_ = pid;
-
   return true;
 }
 
-  bool JointVelocityController::init(hardware_interface::VelocityJointInterface *robot, ros::NodeHandle &n)
+
+bool JointVelocityController::init(hardware_interface::VelocityJointInterface *robot, ros::NodeHandle &n)
 {
   std::string joint_name;
-  if (!n.getParam("joint", joint_name)) {
+  if (!n.getParam("joint", joint_name))
+  {
     ROS_ERROR("No joint given (namespace: %s)", n.getNamespace().c_str());
     return false;
   }
-
-  if (!pid_controller_.init(ros::NodeHandle(n, "pid")))
-    return false;
-
-  controller_state_publisher_.reset(
-    new realtime_tools::RealtimePublisher<controllers_msgs::JointControllerState>
-    (n, "state", 1));
-
-  sub_command_ = n.subscribe<std_msgs::Float64>("command", 1, &JointVelocityController::setCommandCB, this);
-
+  joint_ = robot->getJointHandle(joint_name);
+  sub_command_ = n.subscribe<std_msgs::Float64>("command", 1, &JointVelocityController::commandCB, this);
   return true;
-}
-
-
-void JointVelocityController::setGains(const double &p, const double &i, const double &d, const double &i_max, const double &i_min)
-{
-  pid_controller_.setGains(p,i,d,i_max,i_min);
-
-}
-
-void JointVelocityController::getGains(double &p, double &i, double &d, double &i_max, double &i_min)
-{
-  pid_controller_.getGains(p,i,d,i_max,i_min);
-}
-
-std::string JointVelocityController::getJointName()
-{
-  return joint_.getName();
-}
-
-// Set the joint velocity command
-void JointVelocityController::setCommand(double cmd)
-{
-  command_ = cmd;
-}
-
-// Return the current velocity command
-void JointVelocityController::getCommand(double  & cmd)
-{
-  cmd = command_;
 }
 
 void JointVelocityController::update(const ros::Time& time, const ros::Duration& period)
 {
-  double error = joint_.getVelocity() - command_;
-  double command = pid_controller_.updatePid(error, period);
-  joint_.setCommand(command);
-
-  if(loop_count_ % 10 == 0)
-  {
-    if(controller_state_publisher_ && controller_state_publisher_->trylock())
-    {
-      controller_state_publisher_->msg_.header.stamp = time;
-      controller_state_publisher_->msg_.set_point = command_;
-      controller_state_publisher_->msg_.process_value = joint_.getVelocity();
-      controller_state_publisher_->msg_.error = error;
-      controller_state_publisher_->msg_.time_step = period.toSec();
-      controller_state_publisher_->msg_.command = command;
-
-      double dummy;
-      getGains(controller_state_publisher_->msg_.p,
-               controller_state_publisher_->msg_.i,
-               controller_state_publisher_->msg_.d,
-               controller_state_publisher_->msg_.i_clamp,
-               dummy);
-      controller_state_publisher_->unlockAndPublish();
-    }
-  }
-  loop_count_++;
+  joint_.setCommand(command_);
 }
 
-void JointVelocityController::setCommandCB(const std_msgs::Float64ConstPtr& msg)
+void JointVelocityController::commandCB(const std_msgs::Float64ConstPtr& msg)
 {
   command_ = msg->data;
 }
-
-} // namespace
+}// namespace
 
 PLUGINLIB_DECLARE_CLASS(velocity_controllers, JointVelocityController, velocity_controllers::JointVelocityController, controller_interface::ControllerBase)
+

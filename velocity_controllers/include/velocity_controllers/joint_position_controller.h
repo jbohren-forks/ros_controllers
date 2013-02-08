@@ -34,8 +34,8 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-#ifndef EFFORT_CONTROLLERS_JOINT_POSITION_CONTROLLER_H
-#define EFFORT_CONTROLLERS_JOINT_POSITION_CONTROLLER_H
+#ifndef VELOCITY_CONTROLLERS_JOINT_POSITION_CONTROLLER_H
+#define VELOCITY_CONTROLLERS_JOINT_POSITION_CONTROLLER_H
 
 /**
    @class velocity_controllers::JointPositionController
@@ -101,11 +101,21 @@ public:
    * \brief Issues commands to the joint. Should be called at regular intervals
    */
   void update(const ros::Time& time, const ros::Duration& period);
-
+  /*!
+   * \brief Sets Gains
+   */
   void getGains(double &p, double &i, double &d, double &i_max, double &i_min);
+  /*!
+   * \brief Sets Gains
+   */
   void setGains(const double &p, const double &i, const double &d, const double &i_max, const double &i_min);
 
+  /*!
+   * \brief Get the name of the associated joint
+   */
   std::string getJointName();
+  
+  // Members
   hardware_interface::JointHandle joint_;
   boost::shared_ptr<const urdf::Joint> joint_urdf_;
   realtime_tools::RealtimeBuffer<double> command_;             /**< Last commanded position. */
@@ -113,11 +123,7 @@ public:
 private:
   int loop_count_;
   control_toolbox::Pid pid_controller_;       /**< Internal PID controller. */
-
-  boost::scoped_ptr<
-    realtime_tools::RealtimePublisher<
-      controllers_msgs::JointControllerState> > controller_state_publisher_ ;
-
+  boost::scoped_ptr<realtime_tools::RealtimePublisher<controllers_msgs::JointControllerState> > controller_state_publisher_ ;
   ros::Subscriber sub_command_;
   void setCommandCB(const std_msgs::Float64ConstPtr& msg);
 };
