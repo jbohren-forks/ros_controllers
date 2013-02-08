@@ -54,9 +54,16 @@
 
 #include <boost/thread/condition.hpp>
 #include <ros/node_handle.h>
+// Urdf
+#include <urdf/model.h>
 #include <hardware_interface/joint_command_interface.h>
 #include <controller_interface/controller.h>
 #include <std_msgs/Float64.h>
+// State Publishing   
+#include <controllers_msgs/JointControllerState.h>
+#include <boost/scoped_ptr.hpp>
+#include <boost/thread/condition.hpp>
+#include <realtime_tools/realtime_publisher.h>
 
 
 namespace velocity_controllers
@@ -76,11 +83,14 @@ public:
   void update(const ros::Time& time, const ros::Duration& period);
 
   hardware_interface::JointHandle joint_;
+  boost::shared_ptr<const urdf::Joint> joint_urdf_;
   double command_;
 
 private:
   ros::Subscriber sub_command_;
   void commandCB(const std_msgs::Float64ConstPtr& msg);
+  boost::scoped_ptr<realtime_tools::RealtimePublisher<controllers_msgs::JointControllerState> > controller_state_publisher_ ;
+  
 
 };
 

@@ -51,6 +51,21 @@ JointVelocityController::~JointVelocityController()
 bool JointVelocityController::init(hardware_interface::VelocityJointInterface *robot, const std::string &joint_name)
 {
   joint_ = robot->getJointHandle(joint_name);
+
+  // Load URDF for robot
+  urdf::Model urdf;
+  if (!urdf.initParam("robot_description")){
+    ROS_ERROR("Failed to parse urdf file");
+    return false;
+  }
+  
+  // Get URDF for joint
+  joint_urdf_ = urdf.getJoint(joint_name);
+  if (!joint_urdf_){
+    ROS_ERROR("Could not find joint %s in urdf", joint_name.c_str());
+    return false;
+  }
+
   return true;
 }
 
@@ -62,20 +77,69 @@ bool JointVelocityController::init(hardware_interface::VelocityJointInterface *r
     ROS_ERROR("No joint given (parameter: %s/joint)", n.getNamespace().c_str());
     return false;
   }
+
   joint_ = robot->getJointHandle(joint_name);
+  
+  // Load URDF for robot
+  urdf::Model urdf;
+  if (!urdf.initParam("robot_description")){
+    ROS_ERROR("Failed to parse urdf file");
+    return false;
+  }
+  
+  // Get URDF for joint
+  joint_urdf_ = urdf.getJoint(joint_name);
+  if (!joint_urdf_){
+    ROS_ERROR("Could not find joint %s in urdf", joint_name.c_str());
+    return false;
+  }
+
+  controller_state_publisher_.reset(
+    new realtime_tools::RealtimePublisher<controllers_msgs::JointControllerState>(n, "state", 1));
+  
   sub_command_ = n.subscribe<std_msgs::Float64>("command", 1, &JointVelocityController::commandCB, this);
+  
   return true;
 }
 
 void JointVelocityController::update(const ros::Time& time, const ros::Duration& period)
 {
-  joint_.setCommand(command_);
+  double command_vel = 0;
+  double vel_limit = joint_urdf_->limits->velocity;
+
+  if(command_ > vel_limit){
+    command_vel = vel_limit;
+    ROS_DEBUG_STREAM("Velocity Limit Exceeded: "<<command_);
+  }else if(command_ < -vel_limit){
+    command_vel = -vel_limit;
+    ROS_DEBUG_STREAM("Velocity Limit Exceeded: "<<command_);
+  }else{
+    command_vel = command_;
+  }
+
+  // Set joint velocity command
+  joint_.setCommand(command_vel);
+
+  // Publish joint state
+  if(controller_state_publisher_ && controller_state_publisher_->trylock())
+  {
+    controller_state_publisher_->msg_.header.stamp = time;
+    controller_state_publisher_->msg_.set_point = command_vel;
+    controller_state_publisher_->msg_.process_value = joint_.getPosition();
+    controller_state_publisher_->msg_.process_value_dot = joint_.getVelocity();
+    controller_state_publisher_->msg_.error = 0;
+    controller_state_publisher_->msg_.time_step = period.toSec();
+    controller_state_publisher_->msg_.command = 0;
+    // Publish State
+    controller_state_publisher_->unlockAndPublish();
+  }
 }
 
 void JointVelocityController::commandCB(const std_msgs::Float64ConstPtr& msg)
 {
   command_ = msg->data;
 }
+
 }// namespace
 
 PLUGINLIB_DECLARE_CLASS(velocity_controllers, JointVelocityController, velocity_controllers::JointVelocityController, controller_interface::ControllerBase)
