@@ -35,69 +35,72 @@
 #define CARTESIAN_TFF_CONTROLLER_H
 
 #include <vector>
+#include <boost/scoped_ptr.hpp>
+#include <boost/thread/condition.hpp>
+
+#include <ros/ros.h>
+
+//#include <pr2_mechanism_model/chain.h>
+#include <tf/transform_datatypes.h>
+
 #include <kdl/chain.hpp>
 #include <kdl/chainfksolver.hpp>
 #include <kdl/frames.hpp>
-#include <ros/ros.h>
-#include <tff_controller/TaskFrameFormalism.h>
-#include <geometry_msgs/Twist.h>
-#include <pr2_mechanism_model/chain.h>
 #include <kdl/chainjnttojacsolver.hpp>
-#include <pr2_controller_interface/controller.h>
-#include <tf/transform_datatypes.h>
-#include <control_toolbox/pid.h>
-#include <boost/scoped_ptr.hpp>
-#include <boost/thread/condition.hpp>
+
 #include <realtime_tools/realtime_publisher.h>
 
+#include <hardware_interface/joint_command_interface.h>
+#include <controller_interface/controller.h>
+#include <control_toolbox/pid.h>
 
-namespace controller {
+#include <geometry_msgs/Twist.h>
+#include <tff_controller/TaskFrameFormalism.h>
 
-class TFFController : public pr2_controller_interface::Controller
-{
-public:
-  TFFController();
-  ~TFFController();
+namespace tff_controller {
 
-  bool init(pr2_mechanism_model::RobotState *robot_state, ros::NodeHandle& n);
-  void starting();
-  void update();
+  class TFFController : public controller_interface::Controller<hardware_interface::EffortJointInterface>
+  {
+  public:
+    TFFController();
+    ~TFFController();
 
-  void command(const tff_controller::TaskFrameFormalismConstPtr& tff_msg);
+    bool init(hardware_interface::EffortJointInterface *robot, ros::NodeHandle &n);
+    
+    void starting(const ros::Time& time);
+    void update(const ros::Time& time, const ros::Duration& period);
 
-private:
-  ros::NodeHandle node_;
-  ros::Subscriber sub_command_;
-  ros::Time last_time_;
+    void command(const tff_controller::TaskFrameFormalismConstPtr& tff_msg);
 
-  // pid controllers
-  std::vector<control_toolbox::Pid> vel_pid_controller_, pos_pid_controller_;
+  private:
+    ros::NodeHandle nh_;
+    ros::Subscriber sub_command_;
 
-  // robot description
-  pr2_mechanism_model::RobotState *robot_state_;
-  pr2_mechanism_model::Chain chain_;
+    // pid controllers
+    std::vector<control_toolbox::Pid> vel_pid_controller_, pos_pid_controller_;
 
-  // kdl stuff for kinematics
-  KDL::Chain             kdl_chain_;
-  boost::scoped_ptr<KDL::ChainFkSolverVel> jnt_to_twist_solver_;
-  KDL::JntArrayVel       jnt_posvel_;
-  boost::scoped_ptr<KDL::ChainJntToJacSolver> jnt_to_jac_solver_;
-  KDL::JntArray jnt_pos_, jnt_eff_;
-  KDL::Jacobian jacobian_;
+    // kdl stuff for kinematics
+    KDL::Chain kdl_chain_;
+    boost::scoped_ptr<KDL::ChainFkSolverVel> jnt_to_twist_solver_;
+    boost::scoped_ptr<KDL::ChainJntToJacSolver> jnt_to_jac_solver_;
+    KDL::JntArrayVel jnt_posvel_;
+    KDL::JntArray jnt_pos_, jnt_eff_;
+    KDL::Jacobian jacobian_;
 
-  // command for tff
-  std::vector<int> mode_;
-  std::vector<double> value_, twist_to_wrench_;
+    // command for tff
+    std::vector<int> mode_;
+    std::vector<double> value_, twist_to_wrench_;
 
-  // output of the controller
-  KDL::Wrench wrench_desi_;
+    // output of the controller
+    std::vector<hardware_interface::JointHandle> joint_handles_;
+    KDL::Wrench wrench_desi_;
 
-  KDL::Twist position_, twist_meas_;
-  KDL::Frame pose_meas_, pose_meas_old_;
+    KDL::Twist position_, twist_meas_;
+    KDL::Frame pose_meas_, pose_meas_old_;
 
-  boost::scoped_ptr<realtime_tools::RealtimePublisher<geometry_msgs::Twist> > state_position_publisher_;
-  unsigned int loop_count_;
-};
+    boost::scoped_ptr<realtime_tools::RealtimePublisher<geometry_msgs::Twist> > state_position_publisher_;
+    unsigned int loop_count_;
+  };
 
 
 } // namespace
