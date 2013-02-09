@@ -70,7 +70,7 @@ namespace tff_controller {
     // get URDF and name of root and tip from the parameter server
     std::string robot_description, root_name, tip_name;
 
-    if (!nh_.getParam("robot_description", robot_description)){
+    if (!ros::param::search(n.getNamespace(),"robot_description", robot_description)){
       ROS_ERROR_STREAM("TFFController: No robot description (URDF) found on parameter server ("<<n.getNamespace()<<"/robot_description)");
       return false;
     }
