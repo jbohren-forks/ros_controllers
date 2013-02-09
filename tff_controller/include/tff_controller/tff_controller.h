@@ -88,8 +88,8 @@ namespace tff_controller {
     KDL::Jacobian jacobian_;
 
     // command for tff
-    std::vector<int> mode_;
-    std::vector<double> value_, twist_to_wrench_;
+    std::vector<int> cmd_mode_;
+    std::vector<double> cmd_value_, twist_to_wrench_;
 
     // output of the controller
     std::vector<hardware_interface::JointHandle> joint_handles_;

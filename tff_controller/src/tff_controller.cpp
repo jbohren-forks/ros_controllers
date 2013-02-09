@@ -53,8 +53,8 @@ namespace tff_controller {
   TFFController::TFFController() :
     jnt_to_twist_solver_(NULL),
     jnt_to_jac_solver_(NULL),
-    mode_(6),
-    value_(6),
+    cmd_mode_(6),
+    cmd_value_(6),
     twist_to_wrench_(6),
     state_position_publisher_(NULL)
   {}
@@ -173,8 +173,8 @@ namespace tff_controller {
   {
     // set initial modes and values
     for (unsigned int i=0; i<6; i++){
-      mode_[i] = tff_controller::TaskFrameFormalism::FORCE;
-      value_[i] = 0;
+      cmd_mode_[i] = tff_controller::TaskFrameFormalism::FORCE;
+      cmd_value_[i] = 0;
     }
 
     // reset pid controllers
@@ -227,12 +227,33 @@ namespace tff_controller {
     // calculate desired wrench
     wrench_desi_ = Wrench::Zero();
     for (unsigned int i=0; i<6; i++){
-      if (mode_[i] == tff_controller::TaskFrameFormalism::FORCE)
-        wrench_desi_[i] = value_[i];
-      else if (mode_[i] ==  tff_controller::TaskFrameFormalism::VELOCITY)
-        wrench_desi_[i] = twist_to_wrench_[i] * (value_[i] + vel_pid_controller_[i].computeCommand(value_[i] - twist_meas_[i], dt));
-      else if (mode_[i] == tff_controller::TaskFrameFormalism::POSITION)
-        wrench_desi_[i] = twist_to_wrench_[i] * (pos_pid_controller_[i].computeCommand(value_[i] - position_[i], dt));
+      switch(cmd_mode_[i]) {
+        case tff_controller::TaskFrameFormalism::FORCE:
+          wrench_desi_[i] = cmd_value_[i];
+          break;
+        case tff_controller::TaskFrameFormalism::VELOCITY:
+          wrench_desi_[i] = twist_to_wrench_[i] * (cmd_value_[i] + vel_pid_controller_[i].computeCommand(cmd_value_[i] - twist_meas_[i], dt));
+          break;
+        case tff_controller::TaskFrameFormalism::POSITION:
+          wrench_desi_[i] = twist_to_wrench_[i] * (pos_pid_controller_[i].computeCommand(cmd_value_[i] - position_[i], dt));
+          break;
+        default:
+          // Something is wrong; complain, unset commands, and return
+          static const std::string dimensions("xyz");
+
+          ROS_ERROR_STREAM("TFF mode "<<cmd_mode_[i]
+                           <<" in "<<((i<3)?("translation"):("rotation"))
+                           <<" dimension "<<dimensions.at(i%3)
+                           <<" is not valid. Please see the TaskFrameformalism"
+                           <<" message for acceptable controller modes.");
+
+          // Set all the joint efforts to 0.0
+          for (unsigned int j = 0; j < kdl_chain_.getNrOfJoints(); j++){
+            joint_handles_[j].setCommand(0.0);
+          }
+
+          return;
+      };
     }
 
     // Convert wrench to base reference frame
@@ -241,8 +262,9 @@ namespace tff_controller {
     // Convert the wrench into joint efforts
     for (unsigned int i = 0; i < kdl_chain_.getNrOfJoints(); i++){
       jnt_eff_(i) = 0;
-      for (unsigned int j=0; j<6; j++)
+      for (unsigned int j=0; j<6; j++) {
         jnt_eff_(i) += (jacobian_(j,i) * wrench_desi_(j));
+      }
 
       // Set the joint effort
       joint_handles_[i].setCommand(jnt_eff_(i));
@@ -267,19 +289,19 @@ namespace tff_controller {
 
   void TFFController::command(const tff_controller::TaskFrameFormalismConstPtr& tff_msg)
   {
-    mode_[0] = trunc(tff_msg->mode.linear.x);
-    mode_[1] = trunc(tff_msg->mode.linear.y);
-    mode_[2] = trunc(tff_msg->mode.linear.z);
-    mode_[3] = trunc(tff_msg->mode.angular.x);
-    mode_[4] = trunc(tff_msg->mode.angular.y);
-    mode_[5] = trunc(tff_msg->mode.angular.z);
+    cmd_mode_[0] = trunc(tff_msg->mode.linear.x);
+    cmd_mode_[1] = trunc(tff_msg->mode.linear.y);
+    cmd_mode_[2] = trunc(tff_msg->mode.linear.z);
+    cmd_mode_[3] = trunc(tff_msg->mode.angular.x);
+    cmd_mode_[4] = trunc(tff_msg->mode.angular.y);
+    cmd_mode_[5] = trunc(tff_msg->mode.angular.z);
 
-    value_[0] = tff_msg->value.linear.x;
-    value_[1] = tff_msg->value.linear.y;
-    value_[2] = tff_msg->value.linear.z;
-    value_[3] =  tff_msg->value.angular.x;
-    value_[4] =  tff_msg->value.angular.y;
-    value_[5] =  tff_msg->value.angular.z;
+    cmd_value_[0] = tff_msg->value.linear.x;
+    cmd_value_[1] = tff_msg->value.linear.y;
+    cmd_value_[2] = tff_msg->value.linear.z;
+    cmd_value_[3] =  tff_msg->value.angular.x;
+    cmd_value_[4] =  tff_msg->value.angular.y;
+    cmd_value_[5] =  tff_msg->value.angular.z;
   }
 
 }; // namespace
