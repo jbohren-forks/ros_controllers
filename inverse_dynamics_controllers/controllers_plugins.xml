@@ -1,0 +1,10 @@
+<library path="lib/libinverse_dynamics_controllers">
+
+  <class name="inverse_dynamics_controllers/InverseDynamicsController"
+    type="inverse_dynamics_controllers::InverseDynamicsController"
+    base_class_type="controller_interface::ControllerBase">
+    <description>
+      This controller compensates for inertial, gravitational, and coriolis effects on a robot.
+    </description>
+  </class>
+</library>
